@@ -41,13 +41,13 @@ typedef struct {
     uint8_t current_head;        /* zero */
     uint8_t extended_boot_signature;    /* 0x80 */
     uint8_t reserved2;            /* zero */
-/*0x28*/int64_t number_of_sectors;        /* Number of sectors in volume. Gives
+/*0x28*/uint64_t number_of_sectors;        /* Number of sectors in volume. Gives
 					   maximum volume size of 2^63 sectors.
 					   Assuming standard sector size of 512
 					   bytes, the maximum byte size is
 					   approx. 4.7x10^21 bytes. (-; */
-    int64_t mft_lcn;            /* Cluster location of mft data. */
-    int64_t mftmirr_lcn;        /* Cluster location of copy of mft. */
+    uint64_t mft_lcn;            /* Cluster location of mft data. */
+    uint64_t mftmirr_lcn;        /* Cluster location of copy of mft. */
     int8_t clusters_per_mft_record;    /* Mft record size in clusters. */
     uint8_t reserved0[3];        /* zero */
     int8_t clusters_per_index_record;    /* Index block size in clusters. */
@@ -59,7 +59,6 @@ typedef struct {
 					   0xaa55 in little endian. */
 /* sizeof() = 512 (0x200) bytes */
 } __attribute__((__packed__)) NTFS_BOOT_SECTOR;
-
 
 /**
  * enum NTFS_SYSTEM_FILES - System files mft record numbers.
@@ -195,7 +194,7 @@ typedef struct {
     uint16_t usa_ofs;        /* See NTFS_RECORD definition above. */
     uint16_t usa_count;        /* See NTFS_RECORD definition above. */
 
-/*  8*/    int64_t lsn;        /* $LogFile sequence number for this record. Changed every time the record is modified. */
+/*  8*/    uint64_t lsn;        /* $LogFile sequence number for this record. Changed every time the record is modified. */
 /* 16*/    uint16_t sequence_number;    /* Number of times this mft record has been reused. (See description for MFT_REF above.)
 /* 18*/    uint16_t link_count;        /* Number of hard links, i.e. the number of directory entries referencing this record.
 /* 20*/    uint16_t attrs_offset;    /* Byte offset to the first attribute in this mft record from the start of the mft record.
@@ -252,35 +251,35 @@ typedef enum {
 typedef struct {
 /*Ofs*/
 /*  0*/    ATTR_TYPES type;    /* The (32-bit) type of the attribute. */
-/*  4*/    int32_t length;        /* Byte size of the resident part of the attribute (aligned to 8-byte boundary). Used to get to the next attribute. */
+/*  4*/    uint32_t length;        /* Byte size of the resident part of the attribute (aligned to 8-byte boundary). Used to get to the next attribute. */
 /*  8*/    uint8_t non_resident;    /* If 0, attribute is resident. If 1, attribute is non-resident. */
 /*  9*/    uint8_t name_length;        /* Unicode character size of name of attribute. 0 if unnamed. */
-/* 10*/    int16_t name_offset;    /* If name_length != 0, the byte offset to the beginning of the name from the attribute record. */
+/* 10*/    uint16_t name_offset;    /* If name_length != 0, the byte offset to the beginning of the name from the attribute record. */
 /* 12*/    ATTR_FLAGS flags;    /* Flags describing the attribute. */
-/* 14*/    int16_t instance;        /* The instance of this attribute record. This number is unique within this mft record. */
+/* 14*/    uint16_t instance;        /* The instance of this attribute record. This number is unique within this mft record. */
 /* 16*/    union {
         /* Resident attributes. */
         struct {
-/* 16 */        int32_t value_length; /* Byte size of attribute value. */
-/* 20 */        int16_t value_offset; /* Byte offset of the attribute value from the start of the attribute record. */
+/* 16 */        uint32_t value_length; /* Byte size of attribute value. */
+/* 20 */        uint16_t value_offset; /* Byte offset of the attribute value from the start of the attribute record. */
 /* 22 */        RESIDENT_ATTR_FLAGS resident_flags; /* See above. */
 /* 23 */        int8_t reservedR;        /* Reserved/alignment to 8-byte boundary. */
 /* 24 */        void *resident_end[0]; /* Use offsetof(ATTR_RECORD, resident_end) to get size of a resident attribute. */
         } __attribute__((__packed__));
         /* Non-resident attributes. */
         struct {
-/* 16*/            int64_t lowest_vcn;    /* Lowest valid virtual cluster number
+/* 16*/            uint64_t lowest_vcn;    /* Lowest valid virtual cluster number
 				for this portion of the attribute value or
 				0 if this is the only extent (usually the
 				case). - Only when an attribute list is used
 				does lowest_vcn != 0 ever occur. */
-/* 24*/            int64_t highest_vcn; /* Highest valid vcn of this extent of
+/* 24*/            uint64_t highest_vcn; /* Highest valid vcn of this extent of
 				the attribute value. - Usually there is only one
 				portion, so this usually equals the attribute
 				value size in clusters minus 1. Can be -1 for
 				zero length files. Can be 0 for "single extent"
 				attributes. */
-/* 32*/            int16_t mapping_pairs_offset; /* Byte offset from the
+/* 32*/            uint16_t mapping_pairs_offset; /* Byte offset from the
 				beginning of the structure to the mapping pairs
 				array which contains the mappings between the
 				vcns and the logical cluster numbers (lcns).
@@ -295,7 +294,7 @@ typedef struct {
 /* 35*/            uint8_t reserved1[5];    /* Align to 8-byte boundary. */
 /* The sizes below are only used when lowest_vcn is zero, as otherwise it would
    be difficult to keep them up-to-date.*/
-/* 40*/            int64_t allocated_size;    /* Byte size of disk space
+/* 40*/            uint64_t allocated_size;    /* Byte size of disk space
 				allocated to hold the attribute value. Always
 				is a multiple of the cluster size. When a file
 				is compressed, this field is a multiple of the
@@ -303,10 +302,10 @@ typedef struct {
 				it represents the logically allocated space
 				rather than the actual on disk usage. For this
 				use the compressed_size (see below). */
-/* 48*/            int64_t data_size;    /* Byte size of the attribute
+/* 48*/            uint64_t data_size;    /* Byte size of the attribute
 				value. Can be larger than allocated_size if
 				attribute value is compressed or sparse. */
-/* 56*/            int64_t initialized_size;    /* Byte size of initialized
+/* 56*/            uint64_t initialized_size;    /* Byte size of initialized
 				portion of the attribute value. Usually equals
 				data_size. */
 /* 64 */        void *non_resident_end[0]; /* Use offsetof(ATTR_RECORD,
@@ -314,7 +313,7 @@ typedef struct {
 						      size of a non resident
 						      attribute. */
 /* sizeof(uncompressed attr) = 64*/
-/* 64*/            int64_t compressed_size;    /* Byte size of the attribute
+/* 64*/            uint64_t compressed_size;    /* Byte size of the attribute
 				value after compression. Only present when
 				compressed. Always is a multiple of the
 				cluster size. Represents the actual amount of
@@ -392,6 +391,7 @@ typedef enum {
        FILE_ATTR_DEVICE and preserves everything else. This mask
        is used to obtain all flags that are valid for reading. */
     FILE_ATTR_VALID_SET_FLAGS = 0x000031a7,
+
     /* FILE_ATTR_VALID_SET_FLAGS masks out the old DOS VolId, the
        FILE_ATTR_DEVICE, FILE_ATTR_DIRECTORY, FILE_ATTR_SPARSE_FILE,
        FILE_ATTR_REPARSE_POINT, FILE_ATRE_COMPRESSED and FILE_ATTR_ENCRYPTED
@@ -441,14 +441,14 @@ typedef struct {
 /*hex ofs*/
 /*  0*/    uint64_t parent_directory;    /* Directory this filename is
 					   referenced from. */
-/*  8*/    int64_t creation_time;        /* Time file was created. */
-/* 10*/    int64_t last_data_change_time;    /* Time the data attribute was last
+/*  8*/    uint64_t creation_time;        /* Time file was created. */
+/* 10*/    uint64_t last_data_change_time;    /* Time the data attribute was last
 					   modified. */
-/* 18*/    int64_t last_mft_change_time;    /* Time this mft record was last
+/* 18*/    uint64_t last_mft_change_time;    /* Time this mft record was last
 					   modified. */
-/* 20*/    int64_t last_access_time;        /* Last time this mft record was
+/* 20*/    uint64_t last_access_time;        /* Last time this mft record was
 					   accessed. */
-/* 28*/    int64_t allocated_size;        /* Byte size of on-disk allocated space
+/* 28*/    uint64_t allocated_size;        /* Byte size of on-disk allocated space
 					   for the data attribute.  So for
 					   normal $DATA, this is the
 					   allocated_size from the unnamed
@@ -457,7 +457,7 @@ typedef struct {
 					   compressed_size from the unnamed
 					   $DATA attribute.  NOTE: This is a
 					   multiple of the cluster size. */
-/* 30*/    int64_t data_size;            /* Byte size of actual data in data
+/* 30*/    uint64_t data_size;            /* Byte size of actual data in data
 					   attribute. */
 /* 38*/    FILE_ATTR_FLAGS file_attributes;    /* Flags describing the file. */
 /* 3c*/    union {
@@ -637,9 +637,9 @@ typedef struct {
     uint16_t usa_ofs;        /* See NTFS_RECORD definition. */
     uint16_t usa_count;        /* See NTFS_RECORD definition. */
 
-/*  8*/    leLSN lsn;        /* $LogFile sequence number of the last
+/*  8*/    uint64_t lsn;        /* $LogFile sequence number of the last
 				   modification of this index block. */
-/* 16*/    leVCN index_block_vcn;    /* Virtual cluster number of the index block. */
+/* 16*/    uint64_t index_block_vcn;    /* Virtual cluster number of the index block. */
 /* 24*/    INDEX_HEADER index;    /* Describes the following index entries. */
 /* sizeof()= 40 (0x28) bytes */
 /*
@@ -713,15 +713,15 @@ typedef struct {
         FILE_NAME_ATTR file_name;/* $I30 index in directories. */
 
         //--------------TODO define
-        SII_INDEX_KEY sii;    /* $SII index in $Secure. */
-        SDH_INDEX_KEY sdh;    /* $SDH index in $Secure. */
-        GUID object_id;        /* $O index in FILE_Extend/$ObjId: The
-					   object_id of the mft record found in
-					   the data part of the index. */
-        REPARSE_INDEX_KEY reparse;    /* $R index in
-						   FILE_Extend/$Reparse. */
-        SID sid;        /* $O index in FILE_Extend/$Quota:
-					   SID of the owner of the user_id. */
+//        SII_INDEX_KEY sii;    /* $SII index in $Secure. */
+//        SDH_INDEX_KEY sdh;    /* $SDH index in $Secure. */
+//        GUID object_id;        /* $O index in FILE_Extend/$ObjId: The
+//					   object_id of the mft record found in
+//					   the data part of the index. */
+//        REPARSE_INDEX_KEY reparse;    /* $R index in
+//						   FILE_Extend/$Reparse. */
+//        SID sid;        /* $O index in FILE_Extend/$Quota:
+//					   SID of the owner of the user_id. */
         //--------------
         uint32_t owner_id;        /* $Q index in FILE_Extend/$Quota:
 					   user_id of the owner of the quota
@@ -729,7 +729,7 @@ typedef struct {
 					   the index. */
     } __attribute__((__packed__)) key;
     /* The (optional) index data is inserted here when creating.
-    leVCN vcn;	   If INDEX_ENTRY_NODE bit in ie_flags is set, the last
+    int64_t vcn;	   If INDEX_ENTRY_NODE bit in ie_flags is set, the last
                eight bytes of this index entry contain the virtual
                cluster number of the index block that holds the
                entries immediately preceding the current entry.
@@ -741,5 +741,34 @@ typedef struct {
                (char*)ie + le16_to_cpu(ie->length) - sizeof(VCN)
     */
 } __attribute__((__packed__)) INDEX_ENTRY;
+
+
+typedef struct {
+    uint32_t mft_no;
+    char *filename;
+    uint16_t type;
+    struct ntfs_inode *parent; /*parent directory*/
+    struct ntfs_inode *next_inode; /*connected list of files and dirs in dir or next inode in connected list*/
+} __attribute__((__packed__)) INODE;
+
+
+/**
+ * Basic information collected from different structures to facilitate the work
+ */
+
+
+typedef struct {
+    int64_t mft_lcn;            /* Cluster location of mft data. */
+    int8_t clusters_per_mft_record;    /* Mft record size in clusters. */
+    int8_t clusters_per_index_record;    /* Index block size in clusters. */
+    uint64_t clusters;    /* Total number of clusters */
+    uint16_t bytes_per_sector;        /* Size of a sector in bytes. */
+    uint8_t sectors_per_cluster;    /* Size of a cluster in sectors. */
+
+    struct ntfs_inode *cur_node;
+    struct ntfs_inode *root_node;
+
+    int file_descriptor;
+} __attribute__((__packed__)) GENERAL_INFORMATION;
 
 #endif //SYSTEM_SOFTWARE_NTFS_H
