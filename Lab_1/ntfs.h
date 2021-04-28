@@ -1,6 +1,3 @@
-//
-// Created by Behruz Mansurov on 21.04.2021.
-//
 
 #ifndef SYSTEM_SOFTWARE_NTFS_H
 #define SYSTEM_SOFTWARE_NTFS_H
@@ -197,7 +194,7 @@ typedef struct {
 /*  8*/    uint64_t lsn;        /* $LogFile sequence number for this record. Changed every time the record is modified. */
 /* 16*/    uint16_t sequence_number;    /* Number of times this mft record has been reused. (See description for MFT_REF above.)
 /* 18*/    uint16_t link_count;        /* Number of hard links, i.e. the number of directory entries referencing this record.
-/* 20*/    uint16_t attrs_offset;    /* Byte offset to the first attribute in this mft record from the start of the mft record.
+/* 20*/    uint16_t attrs_offset;    /* Byte offset  to the first attribute in this mft record from the start of the mft record.
 /* 22*/    MFT_RECORD_FLAGS flags;    /* Bit array of MFT_RECORD_FLAGS. When a file is deleted, the MFT_RECORD_IN_USE flag is set to zero. */
 /* 24*/    uint32_t bytes_in_use;    /* Number of bytes used in this mft record.
 /* 28*/    uint32_t bytes_allocated;    /* Number of bytes allocated for this mft record. This should be equal to the mft record size. */
@@ -325,8 +322,6 @@ typedef struct {
         } __attribute__((__packed__));
     } __attribute__((__packed__));
 } __attribute__((__packed__)) ATTR_RECORD;
-
-typedef ATTR_RECORD ATTR_REC;
 
 
 /**
@@ -609,7 +604,7 @@ typedef struct {
 /*  4*/    COLLATION_RULES collation_rule;    /* Collation rule used to sort the
 					   index entries. If type is $FILE_NAME,
 					   this must be COLLATION_FILE_NAME. */
-/*  8*/    uint32_t index_block_size;        /* Size of index block in bytes (in
+/*  8*/    uint32_t index_block_size;        /* Size of index block i   n bytes (in
 					   the index allocation attribute). */
 /* 12*/    int8_t clusters_per_index_block;    /* Size of index block in clusters (in
 					   the index allocation attribute), when
@@ -743,14 +738,20 @@ typedef struct {
 } __attribute__((__packed__)) INDEX_ENTRY;
 
 
-typedef struct {
-    uint32_t mft_no;
+struct inode {
+    uint32_t mft_num;
     char *filename;
     uint16_t type;
-    struct ntfs_inode *parent; /*parent directory*/
-    struct ntfs_inode *next_inode; /*connected list of files and dirs in dir or next inode in connected list*/
-} __attribute__((__packed__)) INODE;
+    struct inode *parent; /*parent directory*/
+    struct inode *next_inode; /*connected list of files and dirs in dir or next inode in connected list*/
+} __attribute__((__packed__));
 
+typedef struct inode INODE;
+
+typedef struct {
+    INODE *start;
+    INODE *result;
+} FIND_INFO;
 
 /**
  * Basic information collected from different structures to facilitate the work
@@ -765,10 +766,19 @@ typedef struct {
     uint16_t bytes_per_sector;        /* Size of a sector in bytes. */
     uint8_t sectors_per_cluster;    /* Size of a cluster in sectors. */
 
-    struct ntfs_inode *cur_node;
-    struct ntfs_inode *root_node;
+    uint64_t mft_record_size_in_bytes;
+    uint16_t block_size_in_bytes;
+
+    INODE *cur_node;
+    INODE *root_node;
 
     int file_descriptor;
 } __attribute__((__packed__)) GENERAL_INFORMATION;
+
+typedef struct {
+    uint64_t length;
+    uint8_t *buf;
+    uint8_t current_block
+} MAPPING_CHUNK;
 
 #endif //SYSTEM_SOFTWARE_NTFS_H
