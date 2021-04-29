@@ -41,7 +41,6 @@ int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_nod
             free_inode(start_result_node);
             return -1;
         }
-        // внутренности папки или элементы директории
         head = result_node->next_inode;
 
         while (head != NULL) {
@@ -87,7 +86,7 @@ char *pwd(const GENERAL_INFORMATION *const g_info) {
     result[0] = '\0';
     INODE *current_inode = g_info->root_node->next_inode;
     if (current_inode == NULL) {
-        strcat(pwd, "/");
+        strcat((char *) pwd, "/");
     }
 
     while (current_inode != NULL) {
@@ -124,7 +123,7 @@ char *cd(GENERAL_INFORMATION *g_info, char *path) {
     }
 
     FIND_INFO *result;
-    int err = 0;
+    int err;
     if (path[0] == '/') {
         err = find_node_by_name(g_info, path, &(g_info->root_node), &result);
         if (err == -1) {
@@ -169,4 +168,66 @@ char *cd(GENERAL_INFORMATION *g_info, char *path) {
     message = "It is not directory\n";
     sprintf(output, "%s", message);
     return output;
+}
+
+char *ls(GENERAL_INFORMATION *g_info, char *path) {
+    FIND_INFO *find_result;
+    int error = 0;
+    bool current_path = false;
+    bool parent_path = false;
+    if (path == NULL || strcmp(path, ".") == 0) {
+        find_result = malloc(sizeof(FIND_INFO));
+        find_result->result = g_info->cur_node;
+        current_path = true;
+        goto parse;
+    }
+
+    if (strcmp(path, "..") == 0) {
+        find_result = malloc(sizeof(FIND_INFO));
+        find_result->result = g_info->cur_node->parent;
+        current_path = true;
+        parent_path = true;
+        goto parse;
+    }
+
+    if (path[0] == '/') {
+        error = find_node_by_name(g_info, path, &g_info->root_node, &find_result);
+    } else {
+        error = find_node_by_name(g_info, path, &g_info->cur_node, &find_result);
+    }
+
+    parse:
+    if (error != -1) {
+        int err = read_directory(g_info, &(find_result->result));
+        if (err == -1) {
+            return NULL;
+        }
+        INODE *tmp = find_result->result->next_inode;
+        char *result[256];
+        char *output = malloc(err * 256);
+        output[0] = '\0';
+        while (tmp != NULL) {
+            if (tmp->type & MFT_RECORD_IS_DIRECTORY) {
+                sprintf((char *) result, "DIRECTORY:\t%s\n", tmp->filename);
+            } else {
+                sprintf((char *) result, "FILE:\t%s\n", tmp->filename);
+            }
+            strcat(output, (const char *) result);
+            tmp = tmp->next_inode;
+        }
+        if (current_path) {
+            free_inode(find_result->result->next_inode);
+            find_result->result->next_inode = NULL;
+        } else {
+            free_inode((find_result->start));
+        }
+        if (parent_path) {
+            g_info->cur_node->parent->next_inode = g_info->cur_node;
+        }
+
+        find_result->result = NULL;
+        find_result->start = NULL;
+        return output;
+    }
+    return NULL;
 }
