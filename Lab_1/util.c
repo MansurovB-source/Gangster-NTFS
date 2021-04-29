@@ -41,13 +41,16 @@ int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_nod
             free_inode(start_result_node);
             return -1;
         }
+        // внутренности папки или элементы директории
         head = result_node->next_inode;
+
         while (head != NULL) {
             if (strcmp(head->filename, sub_dir) == 0) {
                 INODE *tmp = malloc(sizeof(INODE));
                 memcpy(tmp, head, sizeof(INODE));
                 tmp->filename = malloc(strlen(head->filename) + 1);
                 strcpy(tmp->filename, head->filename);
+                // если в директории файли с одинаковыми именами берем последнюю и очищаем за собой
                 free_inode(result_node->next_inode);
                 result_node->next_inode = tmp;
                 found = true;
@@ -62,10 +65,12 @@ int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_nod
 
         result_node = result_node->next_inode;
         result_node->next_inode = NULL;
+
         if (count == 1) {
             *result = malloc(sizeof(FIND_INFO));
             (*result)->start = start_result_node;
             (*result)->result = result_node;
+            return 0;
         } else {
             count--;
         }
@@ -121,12 +126,10 @@ char *cd(GENERAL_INFORMATION *g_info, char *path) {
     FIND_INFO *result;
     int err = 0;
     if (path[0] == '/') {
-        err = find_node_by_name(g_info, path, &(g_info->cur_node), &result);
-        if (err = -1) {
-            //TODO
-            goto no_f;
+        err = find_node_by_name(g_info, path, &(g_info->root_node), &result);
+        if (err == -1) {
+            goto error;
         }
-
         if (result->result->type & MFT_RECORD_IS_DIRECTORY) {
             g_info->root_node->next_inode = result->start->next_inode;
             result->start->next_inode->parent = g_info->root_node;
@@ -136,11 +139,11 @@ char *cd(GENERAL_INFORMATION *g_info, char *path) {
             free(result);
             return output;
         } else {
-            goto is_f;
+            goto is_file;
         }
     } else {
         err = find_node_by_name(g_info, path, &(g_info->cur_node), &result);
-        if (err == -1) goto no_f;
+        if (err == -1) goto error;
         if (result->result->type & MFT_RECORD_IS_DIRECTORY) {
             g_info->cur_node->next_inode = result->start->next_inode;
             result->start->next_inode->parent = g_info->cur_node;
@@ -150,19 +153,20 @@ char *cd(GENERAL_INFORMATION *g_info, char *path) {
             free(result);
             return output;
         } else {
-            goto is_f;
+            goto is_file;
         }
     }
 
-    no_f:
-    message = "No such file or directory\n";
-    sprintf(output, "%s", message);
-    return output;
-    is_f:
-    free_inode((result->start));
-    free(result);
-    message = "Not a directory\n";
+    error:
+    message = "No such directory\n";
     sprintf(output, "%s", message);
     return output;
 
+
+    is_file:
+    free_inode((result->start));
+    free(result);
+    message = "It is not directory\n";
+    sprintf(output, "%s", message);
+    return output;
 }
