@@ -231,3 +231,56 @@ char *ls(GENERAL_INFORMATION *g_info, char *path) {
     }
     return NULL;
 }
+
+
+int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
+    char *node_path = malloc(strlen(to_path) + strlen((node->filename)) + 2);
+    strcpy(node_path, to_path);
+    strcat(node_path, "/");
+    strcat(node_path, node->filename);
+
+    if (!(node->type & MFT_RECORD_IS_DIRECTORY)) {
+        int fd = open(node_path, O_CREAT | O_WRONLY | O_TRUNC);
+        if (fd == -1) {
+            free(node_path);
+            close(fd);
+            return -1;
+        }
+
+        //TODO read_file_data from file
+        MAPPING_CHUNK_DATA *chunk_data;
+//        int err = read_file_data(g_info, node, &chunk_data);
+    }
+}
+
+char *cp(GENERAL_INFORMATION *g_info, char *from_path, char *to_path) {
+    char *output = malloc(32);
+    output[0] = '\0';
+    if (strcmp(from_path, ".") == 0 || strcmp(from_path, "..") == 0) {
+        sprintf(output, "ERROR: Incompatible file path\n");
+        return output;
+    }
+    FIND_INFO *result;
+    INODE *start_node;
+    char *message;
+    if (from_path[0] == '/') {
+        start_node = g_info->root_node;
+    } else {
+        start_node = g_info->cur_node;
+    }
+    int err = find_node_by_name(g_info, from_path, &start_node, &result);
+    if (err == -1) {
+        message = "No such file or directory";
+        sprintf(output, "%s\n", message);
+        return output;
+    }
+    //TODO copy files and directory
+    else if () {
+
+    } else {
+        message = "ERROR: ERROR";
+        sprintf(output, "%s\n", message);
+        return output;
+    }
+    return output;
+}

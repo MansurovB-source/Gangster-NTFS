@@ -384,3 +384,45 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
     return cnt;
 }
 
+int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA **chunk_data) {
+    if (inode->type & MFT_RECORD_IS_DIRECTORY) {
+        return -1;
+    }
+
+    MFT_RECORD *mft_file_record = malloc(sizeof(MFT_RECORD));
+    uint64_t offset = search_mft_record(g_info, inode->mft_num, &mft_file_record);
+
+    if (offset == -1) {
+        free(mft_file_record);
+        return -1;
+    }
+
+    ATTR_RECORD *attr_data = NULL;
+    int err = search_attr(g_info, AT_DATA, mft_file_record, &attr_data);
+    if (err == -1) {
+        free(mft_file_record);
+        return -1;
+    }
+
+    *chunk_data = malloc(sizeof(MAPPING_CHUNK_DATA));
+
+    if (!attr_data->non_resident) {
+        (*chunk_data)->resident = 1;
+        (*chunk_data)->length = attr_data->value_length;
+        (*chunk_data)->buf = malloc(attr_data->value_length);
+        memcpy((*chunk_data)->buf, (uint8_t *) attr_data + attr_data->value_offset, attr_data->value_length);
+        (*chunk_data)->lcns = NULL;
+        (*chunk_data)->lengths = NULL;
+    } else {
+        (*chunk_data)->resident = 0;
+        uint64_t stream =
+                offset + ((uint8_t *) attr_data - (uint8_t *) mft_file_record) + attr_data->mapping_pairs_offset;
+        //TODO init chunk data
+        // init_chunk_data(stream, g_info, &(*chunk))
+        (*chunk_data)->buf = malloc(g_info->block_size_in_bytes);
+        (*chunk_data)->blocks_count = 0;
+    }
+    free(mft_file_record);
+    return 0;
+}
+

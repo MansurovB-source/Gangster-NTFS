@@ -781,4 +781,17 @@ typedef struct {
     uint8_t current_block
 } MAPPING_CHUNK;
 
+typedef struct {
+    uint8_t resident;
+    uint64_t length;
+    uint64_t blocks_count;
+    uint8_t *buf;
+    int64_t *lcns;
+    uint64_t *lengths;
+    int cut_lcn;
+    int lcn_count;
+    uint64_t cur_block;
+    int signal;
+} MAPPING_CHUNK_DATA;
+
 #endif //SYSTEM_SOFTWARE_NTFS_H
