@@ -384,6 +384,78 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
     return cnt;
 }
 
+int init_chunk_data(uint64_t
+                    offset,
+                    GENERAL_INFORMATION *g_info, MAPPING_CHUNK_DATA
+                    **chunk_data) {
+    uint8_t *run_list = malloc(g_info->block_size_in_bytes);
+    pread(g_info
+                  ->file_descriptor, run_list, g_info->block_size_in_bytes, offset);
+    uint8_t *ptr_run_list;
+
+    int64_t LCN = 0;
+
+    (*chunk_data)->lcns = malloc(sizeof(int64_t) * 16);
+    (*chunk_data)->lengths = malloc(sizeof(uint64_t) * 16);
+    int buf_size = 16;
+    int cur_size = 0;
+
+    uint8_t data_run_offset_size; //размер поля смещения
+    uint8_t data_run_length_size; //размер поля длины
+
+    uint64_t data_run_length = 0; //на выходе, распакованное значение числа кластеров
+    int64_t data_run_offset = 0; //на выходе, распакованное значение кластерного смещения
+
+    do {
+        //из старшего полубайта считаем размер поля смещения
+        data_run_offset_size = (*ptr_run_list >> 4) & 0x0F;
+        //из младшего размер поля смещения
+        data_run_length_size = *ptr_run_list & 0x0F;
+
+        //указатель на сами данные
+        ptr_run_list++;
+        uint8_t i = 0;
+
+        //цикл распаковки длины отрезка, с каждой итерацией значение сдвигается на i-байт и
+        //прибавляется с длиной
+        for (i = 0; i < data_run_length_size; i++) {
+            data_run_length += *ptr_run_list << (i << 3);
+            ptr_run_list++;
+        }
+
+        /* NTFS 3+ sparse files, если файл разряжен */
+        if (data_run_offset_size == 0) {
+            data_run_offset = -1;
+            //TODO maybe break
+        } else {
+            //цикл распаковки смещения
+            for (i = 0; i < data_run_offset_size - 1; i++) {
+                data_run_offset += *ptr_run_list << (i << 3);
+                ptr_run_list++;
+            }
+            //последний байт может быть знаковым, поэтому он обрабатывается отдельно
+            data_run_offset = ((char) (*(ptr_run_list++)) << (i << 3)) + data_run_offset;
+        }
+
+        if (cur_size == buf_size) {
+            (*chunk_data)->lcns = realloc((*chunk_data)->lcns, 2 * buf_size);
+            (*chunk_data)->lengths = realloc((*chunk_data)->lengths, 2 * buf_size);
+            buf_size *= 2;
+        }
+        LCN += data_run_offset;
+
+        (*chunk_data)->lcns[cur_size] = LCN;
+        (*chunk_data)->lengths[cur_size] = data_run_length;
+        cur_size++;
+    } while (*ptr_run_list);
+
+    (*chunk_data)->cur_block = 0;
+    (*chunk_data)->lcn_count = cur_size;
+    (*chunk_data)->cur_block = 0;
+    free(run_list);
+    return 0;
+}
+
 int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA **chunk_data) {
     if (inode->type & MFT_RECORD_IS_DIRECTORY) {
         return -1;
@@ -417,12 +489,12 @@ int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA
         (*chunk_data)->resident = 0;
         uint64_t stream =
                 offset + ((uint8_t *) attr_data - (uint8_t *) mft_file_record) + attr_data->mapping_pairs_offset;
-        //TODO init chunk data
-        // init_chunk_data(stream, g_info, &(*chunk))
+        init_chunk_data(stream, g_info, &(*chunk_data));
         (*chunk_data)->buf = malloc(g_info->block_size_in_bytes);
         (*chunk_data)->blocks_count = 0;
     }
     free(mft_file_record);
     return 0;
 }
+
 
