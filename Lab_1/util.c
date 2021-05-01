@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "ntfs.h"
 #include "ntfs.c"
 
@@ -247,10 +250,64 @@ int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
             return -1;
         }
 
-        //TODO read_file_data from file
         MAPPING_CHUNK_DATA *chunk_data;
-//        int err = read_file_data(g_info, node, &chunk_data);
+        int err = read_file_data(g_info, node, &chunk_data);
+        if (err == -1) {
+            free(node_path);
+            close(fd);
+        }
+        if (chunk_data->resident) {
+            pwrite(fd, chunk_data->buf, chunk_data->lengths, 0);
+            close(fd);
+            free(chunk_data);
+            free(node_path);
+            return 1;
+        } else {
+            int64_t offset = 0;
+            uint64_t size;
+            while (read_block_file(g_info, &chunk_data) == 0) {
+                if (chunk_data->blocks_count * g_info->block_size_in_bytes > chunk_data->length) {
+                    size = chunk_data->length - ((chunk_data->blocks_count - 1) * g_info->block_size_in_bytes);
+                    offset += pwrite(fd, chunk_data->buf, size, offset);
+                    break;
+                } else {
+                    size = g_info->block_size_in_bytes;
+                }
+                offset += pwrite(fd, chunk_data->buf, size, offset);
+            }
+            close(g_info);
+            int result = chunk_data->signal;
+            free_data_chunk(chunk_data);
+            free(node_path);
+            return result;
+        }
+    } else {
+        if (mkdir(node_path, 0777) != 0) {
+            free(node_path);
+            return -1;
+        }
+        INODE *read_node = malloc(sizeof(INODE));
+        memcpy(read_node, node, sizeof(INODE));
+        read_node->filename = NULL;
+        int err = read_directory(g_info, &read_node);
+        if (err == -1) {
+            free(node_path);
+            free_inode(read_node);
+            return -1;
+        }
+        INODE *tmp = read_node->next_inode;
+        while (tmp != NULL) {
+            if (copy(g_info, tmp, node_path) == -1) {
+                free(node_path);
+                free(read_node);
+                return -1;
+            }
+            tmp = tmp->next_inode;
+        }
+        free(node_path);
+        free_inode(read_node);
     }
+    return 0;
 }
 
 char *cp(GENERAL_INFORMATION *g_info, char *from_path, char *to_path) {
@@ -273,14 +330,13 @@ char *cp(GENERAL_INFORMATION *g_info, char *from_path, char *to_path) {
         message = "No such file or directory";
         sprintf(output, "%s\n", message);
         return output;
-    }
-    //TODO copy files and directory
-    else if () {
-
+    } else if (copy(g_info, result->result, to_path) != -1) {
+        message = "Successfully copied\n";
+        sprintf(output, "%s", message);
+        return output;
     } else {
         message = "ERROR: ERROR";
         sprintf(output, "%s\n", message);
         return output;
     }
-    return output;
 }

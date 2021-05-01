@@ -788,7 +788,7 @@ typedef struct {
     uint8_t *buf;
     int64_t *lcns;
     uint64_t *lengths;
-    int cut_lcn;
+    int cur_lcn;
     int lcn_count;
     uint64_t cur_block;
     int signal;

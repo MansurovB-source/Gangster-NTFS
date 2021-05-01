@@ -449,7 +449,7 @@ int init_chunk_data(uint64_t
         cur_size++;
     } while (*ptr_run_list);
 
-    (*chunk_data)->cur_block = 0;
+    (*chunk_data)->cur_lcn = 0;
     (*chunk_data)->lcn_count = cur_size;
     (*chunk_data)->cur_block = 0;
     free(run_list);
@@ -490,6 +490,7 @@ int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA
         uint64_t stream =
                 offset + ((uint8_t *) attr_data - (uint8_t *) mft_file_record) + attr_data->mapping_pairs_offset;
         init_chunk_data(stream, g_info, &(*chunk_data));
+        (*chunk_data)->length = attr_data->data_size;
         (*chunk_data)->buf = malloc(g_info->block_size_in_bytes);
         (*chunk_data)->blocks_count = 0;
     }
@@ -497,4 +498,40 @@ int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA
     return 0;
 }
 
+int read_block_file(GENERAL_INFORMATION *g_info, MAPPING_CHUNK_DATA **chunk_data) {
+    uint64_t buf_current_size = 0;
+    uint64_t buf_size = g_info->block_size_in_bytes;
 
+    if ((*chunk_data)->cur_lcn == (*chunk_data)->lcn_count) {
+        (*chunk_data)->signal = 1;
+        return 1;
+    }
+    int64_t LCN = (*chunk_data)->lcns[(*chunk_data)->cur_lcn] + (*chunk_data)->cur_block;
+    int err = read_clusters_to_buf(&(*chunk_data)->buf, &buf_current_size, &buf_size, LCN, 1, g_info);
+    if (err == -1) {
+        (*chunk_data)->signal = -1;
+        return -1;
+    }
+    (*chunk_data)->cur_block++;
+    (*chunk_data)->blocks_count++;
+    (*chunk_data)->signal = 0;
+    return 0;
+
+}
+
+int free_data_chunk(MAPPING_CHUNK_DATA *chunk_data) {
+    if (chunk_data->buf != NULL) {
+        free(chunk_data->buf);
+    }
+
+    if (chunk_data->lcns != NULL) {
+        free(chunk_data->lcns);
+    }
+
+    if (chunk_data->lcns != NULL) {
+        free(chunk_data->lcns);
+    }
+
+    free(chunk_data);
+    return 0;
+}
