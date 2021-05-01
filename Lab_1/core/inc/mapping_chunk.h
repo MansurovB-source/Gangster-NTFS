@@ -9,7 +9,7 @@
 typedef struct {
     uint64_t length;
     uint8_t *buf;
-    uint8_t current_block
+    uint8_t current_block;
 } MAPPING_CHUNK;
 
 

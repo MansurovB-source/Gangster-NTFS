@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "core/inc/util.h"
+#include "util.h"
 
 static int count_nodes(char *path) {
     char path_buf[512];

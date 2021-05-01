@@ -1,4 +1,4 @@
-#include "core/inc/ntfs.h"
+#include <ntfs.h>
 
 #define FILE_NAME_MAX_SIZE 255
 

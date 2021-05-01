@@ -1,4 +1,4 @@
-#include "core/inc/device.h"
+#include <device.h>
 
 int init_cache(blkid_cache *cache) {
     int status = blkid_get_cache(cache, NULL);

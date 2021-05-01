@@ -5,13 +5,19 @@ LIBS=-lblkid
 all: main
 
 main: device.o main.o
-	$(CC) device.o main.o -o main $(LIBS)
+	$(CC) device.o ntfs.o util.o main.o -o main $(LIBS)
 
-device.o: device.h device.c
-	$(CC) $(CFLAGS) device.c
+ntfs.o: ./core/src/ntfs.c
+	$(CC) $(CFLAGS) ./core/src/ntfs.c
 
-main.o: main.c
-	$(CC) $(CFLAGS) main.c
+util.o: ./core/src/util.c
+	$(CC) $(CFLAGS) ./core/src/util.c
+
+device.o: ./core/src/device.c
+	$(CC) $(CFLAGS) ./core/src/device.c
+
+main.o: ./app/src/main.c
+	$(CC) $(CFLAGS) ./app/src/main.c
 
 clean:
 	rm -rf *.o main

@@ -1,8 +1,16 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdbool.hs>
-#include "core/inc/device.h"
-#include <core/inc/util.h>
+#include <stdbool.h>
+#include <device.h>
+#include <util.h>
+#include <getopt.h>
+
+
+static void help();
+
+static void shell(char *filename);
+
+static void options(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
     options(argc, argv);
@@ -18,7 +26,7 @@ static void options(int argc, char *argv[]) {
             {0,       0, 0,    0}
     };
 
-    int rez = 0;
+    int rez;
     int long_id = 0;
 
     while ((rez = getopt_long(argc, argv, short_flags, long_flags, &long_id)) == -1) {
@@ -32,7 +40,9 @@ static void options(int argc, char *argv[]) {
             case 's':
                 shell(optarg);
                 break;
-
+            default:
+                puts("invalid arg");
+                break;
         }
     }
 }
@@ -43,13 +53,13 @@ struct help {
     char *description;
 };
 
-static struct help_list[] = {
-{
-'l', "list", "show list of devices and partition"},
-{
-'h', "help", "show help (this message)"},
-{
-'s', "shell", "shell mode (interactive mode)"}
+static struct help help_list[3] = {
+        {
+                'l', "list",  "show list of devices and partition"},
+        {
+                'h', "help",  "show help (this message)"},
+        {
+                's', "shell", "shell mode (interactive mode)"}
 };
 
 static void help() {
@@ -65,7 +75,7 @@ static void help() {
 }
 
 static void shell(char *filename) {
-    GENERAL_INFO *g_info = init(filename);
+    GENERAL_INFORMATION *g_info = init(filename);
     if (g_info == NULL) {
         printf("No NTFS file system detected");
     }
@@ -86,7 +96,7 @@ static void shell(char *filename) {
         char *from_path = strtok(NULL, sep);
         char *to_path = strtok(NULL, sep);
         if (strcmp(command, "ls") == 0) {
-            output = ls(g_info, path);
+            output = ls(g_info, from_path);
             if (output == NULL) {
                 printf("No such file or directory");
                 continue;
@@ -97,12 +107,12 @@ static void shell(char *filename) {
             output = pwd(g_info);
             printf("%s\n", output);
             free(output);
-        } esle if (strcmp(command, "cd") == 0) {
+        } else if (strcmp(command, "cd") == 0) {
             if (from_path == NULL) {
                 puts("cd require path argument\n");
                 continue;
             }
-            output = cd(g_info, path);
+            output = cd(g_info, from_path);
             printf("%s", output);
             free(output);
         } else if (strcmp(command, "cp") == 0) {
