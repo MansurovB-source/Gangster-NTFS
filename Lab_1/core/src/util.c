@@ -1,13 +1,7 @@
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include "ntfs.h"
-#include "ntfs.c"
+#include "core/inc/util.h"
 
-int count_nodes(char *path) {
+static int count_nodes(char *path) {
     char path_buf[512];
     strcpy(path_buf, path);
     int result = 0;
@@ -20,7 +14,7 @@ int count_nodes(char *path) {
     return result;
 }
 
-int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_node, FIND_INFO **result) {
+static int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_node, FIND_INFO **result) {
     INODE *result_node = malloc(sizeof(INODE));
     INODE *head;
     memcpy(result_node, *start_node, sizeof(INODE));
@@ -81,6 +75,80 @@ int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **start_nod
     return -1;
 }
 
+static int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
+    char *node_path = malloc(strlen(to_path) + strlen((node->filename)) + 2);
+    strcpy(node_path, to_path);
+    strcat(node_path, "/");
+    strcat(node_path, node->filename);
+
+    if (!(node->type & MFT_RECORD_IS_DIRECTORY)) {
+        int fd = open(node_path, O_CREAT | O_WRONLY | O_TRUNC);
+        if (fd == -1) {
+            free(node_path);
+            close(fd);
+            return -1;
+        }
+
+        MAPPING_CHUNK_DATA *chunk_data;
+        int err = read_file_data(g_info, node, &chunk_data);
+        if (err == -1) {
+            free(node_path);
+            close(fd);
+        }
+        if (chunk_data->resident) {
+            pwrite(fd, chunk_data->buf, chunk_data->lengths, 0);
+            close(fd);
+            free(chunk_data);
+            free(node_path);
+            return 1;
+        } else {
+            int64_t offset = 0;
+            uint64_t size;
+            while (read_block_file(g_info, &chunk_data) == 0) {
+                if (chunk_data->blocks_count * g_info->block_size_in_bytes > chunk_data->length) {
+                    size = chunk_data->length - ((chunk_data->blocks_count - 1) * g_info->block_size_in_bytes);
+                    offset += pwrite(fd, chunk_data->buf, size, offset);
+                    break;
+                } else {
+                    size = g_info->block_size_in_bytes;
+                }
+                offset += pwrite(fd, chunk_data->buf, size, offset);
+            }
+            close(fd);
+            int result = chunk_data->signal;
+            free_data_chunk(chunk_data);
+            free(node_path);
+            return result;
+        }
+    } else {
+        if (mkdir(node_path, 0777) != 0) {
+            free(node_path);
+            return -1;
+        }
+        INODE *read_node = malloc(sizeof(INODE));
+        memcpy(read_node, node, sizeof(INODE));
+        read_node->filename = NULL;
+        int err = read_directory(g_info, &read_node);
+        if (err == -1) {
+            free(node_path);
+            free_inode(read_node);
+            return -1;
+        }
+        INODE *tmp = read_node->next_inode;
+        while (tmp != NULL) {
+            if (copy(g_info, tmp, node_path) == -1) {
+                free(node_path);
+                free(read_node);
+                return -1;
+            }
+            tmp = tmp->next_inode;
+        }
+        free(node_path);
+        free_inode(read_node);
+    }
+    return 0;
+}
+
 char *pwd(const GENERAL_INFORMATION *const g_info) {
     uint64_t size = 2;   // for 0x20 and 0x00
     uint16_t current_size = 256;
@@ -105,7 +173,6 @@ char *pwd(const GENERAL_INFORMATION *const g_info) {
     strcat(result, " ");
     return result;
 }
-
 
 char *cd(GENERAL_INFORMATION *g_info, char *path) {
     char *output = malloc(16);
@@ -233,81 +300,6 @@ char *ls(GENERAL_INFORMATION *g_info, char *path) {
         return output;
     }
     return NULL;
-}
-
-
-int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
-    char *node_path = malloc(strlen(to_path) + strlen((node->filename)) + 2);
-    strcpy(node_path, to_path);
-    strcat(node_path, "/");
-    strcat(node_path, node->filename);
-
-    if (!(node->type & MFT_RECORD_IS_DIRECTORY)) {
-        int fd = open(node_path, O_CREAT | O_WRONLY | O_TRUNC);
-        if (fd == -1) {
-            free(node_path);
-            close(fd);
-            return -1;
-        }
-
-        MAPPING_CHUNK_DATA *chunk_data;
-        int err = read_file_data(g_info, node, &chunk_data);
-        if (err == -1) {
-            free(node_path);
-            close(fd);
-        }
-        if (chunk_data->resident) {
-            pwrite(fd, chunk_data->buf, chunk_data->lengths, 0);
-            close(fd);
-            free(chunk_data);
-            free(node_path);
-            return 1;
-        } else {
-            int64_t offset = 0;
-            uint64_t size;
-            while (read_block_file(g_info, &chunk_data) == 0) {
-                if (chunk_data->blocks_count * g_info->block_size_in_bytes > chunk_data->length) {
-                    size = chunk_data->length - ((chunk_data->blocks_count - 1) * g_info->block_size_in_bytes);
-                    offset += pwrite(fd, chunk_data->buf, size, offset);
-                    break;
-                } else {
-                    size = g_info->block_size_in_bytes;
-                }
-                offset += pwrite(fd, chunk_data->buf, size, offset);
-            }
-            close(g_info);
-            int result = chunk_data->signal;
-            free_data_chunk(chunk_data);
-            free(node_path);
-            return result;
-        }
-    } else {
-        if (mkdir(node_path, 0777) != 0) {
-            free(node_path);
-            return -1;
-        }
-        INODE *read_node = malloc(sizeof(INODE));
-        memcpy(read_node, node, sizeof(INODE));
-        read_node->filename = NULL;
-        int err = read_directory(g_info, &read_node);
-        if (err == -1) {
-            free(node_path);
-            free_inode(read_node);
-            return -1;
-        }
-        INODE *tmp = read_node->next_inode;
-        while (tmp != NULL) {
-            if (copy(g_info, tmp, node_path) == -1) {
-                free(node_path);
-                free(read_node);
-                return -1;
-            }
-            tmp = tmp->next_inode;
-        }
-        free(node_path);
-        free_inode(read_node);
-    }
-    return 0;
 }
 
 char *cp(GENERAL_INFORMATION *g_info, char *from_path, char *to_path) {

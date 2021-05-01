@@ -11,9 +11,16 @@
 #define _TiB_ pow(2,40)
 
 int init_cache(blkid_cache *cache);
+
 int probe_devices(blkid_cache *cache);
+
 int iterate_devices(blkid_cache *cache);
+
 void size_print(long long size);
+
 void get_tag(blkid_probe *probe, char *tag_name);
+
+void print_device();
+
 
 #endif
