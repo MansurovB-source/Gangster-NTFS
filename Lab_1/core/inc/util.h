@@ -1,6 +1,8 @@
 #ifndef LAB_1_UTIL_H
 #define LAB_1_UTIL_H
 
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "ntfs.h"
 
 char *pwd(const GENERAL_INFORMATION *g_info);

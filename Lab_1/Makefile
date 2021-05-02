@@ -4,7 +4,7 @@ LIBS=-lblkid
 
 all: main
 
-main: device.o main.o
+main: device.o ntfs.o util.o main.o 
 	$(CC) device.o ntfs.o util.o main.o -o main $(LIBS)
 
 ntfs.o: ./core/src/ntfs.c
@@ -23,4 +23,7 @@ clean:
 	rm -rf *.o main
 
 start:
-	./main
+	./main -l
+
+
+	

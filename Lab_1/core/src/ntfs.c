@@ -1,6 +1,12 @@
-#include <ntfs.h>
+#include "../inc/ntfs.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #define FILE_NAME_MAX_SIZE 255
+
+extern int errno;
 
 static uint8_t file_name_convertor(char *file_name, const INDEX_ENTRY *index_entry);
 
@@ -13,8 +19,14 @@ static int parse_data_run(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING_
 static int init_chunk_data(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING_CHUNK_DATA **chunk_data);
 
 GENERAL_INFORMATION *init(char *file_name) {
+    int err = 0;
     int file_descriptor;
-    if ((file_descriptor = open(file_name, O_RDONLY, 0666)) == -1) {
+    file_descriptor = open(name, O_RDONLY);
+    if (file_descriptor == -1) {
+        err = errno;
+        printf("%d\n", errno);
+        printf("%s\n", strerror( err));
+        printf("%s\n", "fuck you");
         return NULL;
     }
 
@@ -47,7 +59,7 @@ GENERAL_INFORMATION *init(char *file_name) {
 
 NTFS_BOOT_SECTOR *open_NTFS_file_system(int file_descriptor) {
     NTFS_BOOT_SECTOR *boot_sector = malloc(sizeof(NTFS_BOOT_SECTOR));
-    pread(file_descriptor, boot_sector, sizeof(NTFS_BOOT_SECTOR));
+    pread(file_descriptor, boot_sector, sizeof(NTFS_BOOT_SECTOR), 0);
     if (strcmp((const char *) boot_sector->oem_id, "NTFS    ") == 0) {
         return boot_sector;
     } else {
@@ -332,7 +344,7 @@ int free_data_chunk(MAPPING_CHUNK_DATA *chunk_data) {
 
 
 static uint8_t file_name_convertor(char *file_name, const INDEX_ENTRY *index_entry) {
-    uint16_t *filename = index_entry->key.file_name.file_name;
+    const uint16_t *filename = index_entry->key.file_name.file_name;
     uint8_t filename_length = index_entry->key.file_name.file_name_length;
 
     for (uint8_t i = 0; i < filename_length; i++) {

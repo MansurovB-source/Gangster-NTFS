@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <device.h>
-#include <util.h>
+#include "../../core/inc/device.h"
+#include "../../core/inc/util.h"
 #include <getopt.h>
 
 
@@ -29,19 +29,17 @@ static void options(int argc, char *argv[]) {
     int rez;
     int long_id = 0;
 
-    while ((rez = getopt_long(argc, argv, short_flags, long_flags, &long_id)) == -1) {
+    while ((rez = getopt_long(argc, argv, short_flags, long_flags, &long_id)) != -1) {
         switch (rez) {
             case 'l':
                 print_device();
                 break;
             case 'h':
+                
                 help();
                 break;
             case 's':
                 shell(optarg);
-                break;
-            default:
-                puts("invalid arg");
                 break;
         }
     }
@@ -66,7 +64,7 @@ static void help() {
     for (uint8_t i = 0; i < 3; i++) {
         printf("\tshor name: %c\n"
                "\tlong name: %s\n"
-               "\tdescription: %s\n",
+               "\tdescription: %s\n\n",
                help_list[i].short_f,
                help_list[i].long_f,
                help_list[i].description
@@ -76,8 +74,10 @@ static void help() {
 
 static void shell(char *filename) {
     GENERAL_INFORMATION *g_info = init(filename);
+    printf("%s\n", filename);
     if (g_info == NULL) {
-        printf("No NTFS file system detected");
+        puts("No NTFS file system detected");
+        return;
     }
 
     bool exit = false;

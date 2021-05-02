@@ -1,4 +1,4 @@
-#include <device.h>
+#include "../inc/device.h"
 
 int init_cache(blkid_cache *cache) {
     int status = blkid_get_cache(cache, NULL);
@@ -31,7 +31,7 @@ int iterate_devices(blkid_cache *cache) {
 
         blkid_probe probe = blkid_new_probe_from_filename(device_name);
         if (probe == NULL) {
-            fprintf(stderr, "Launch util as root to get more information!\n")
+            fprintf(stderr, "Launch util as root to get more information!\n");
         } else {
             blkid_loff_t size = blkid_probe_get_size(probe);
             size_print(size);
@@ -40,8 +40,8 @@ int iterate_devices(blkid_cache *cache) {
             printf("\t");
             get_tag(&probe, "TYPE");
             get_tag(&probe, "UUID");
-            get_tag(&probe, "LABEL")
-            printf("\t");
+            get_tag(&probe, "LABEL");
+            printf("\t\n");
         }
     }
     blkid_dev_iterate_end(iterator);
@@ -49,15 +49,15 @@ int iterate_devices(blkid_cache *cache) {
 
 void size_print(long long size) {
     if (size >= _TiB_) {
-        printf("%lld TiB\n", (long long) (size / _TiB_));
+        printf("%lld TiB", (long long) (size / _TiB_));
     } else if (size >= _GiB_) {
-        printf("%lld Gib\n", (long long) (size / _GiB_));
+        printf("%lld Gib", (long long) (size / _GiB_));
     } else if (size >= _MiB_) {
-        printf("%lld Mib\n", (long long) (size / _MiB_));
+        printf("%lld Mib", (long long) (size / _MiB_));
     } else if (size >= _KiB_) {
-        printf("%lld Kib\n", (long long) (size / _KiB_));
+        printf("%lld Kib", (long long) (size / _KiB_));
     } else {
-        printf("%lld B\n", (long long) (size / _KiB_));
+        printf("%lld B", (long long) (size / _KiB_));
     }
 }
 
