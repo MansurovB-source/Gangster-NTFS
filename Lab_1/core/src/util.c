@@ -150,14 +150,18 @@ static int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
 }
 
 char *pwd(const GENERAL_INFORMATION *const g_info) {
+    //puts("PWD: ILOVEYOU");
     uint64_t size = 2;   // for 0x20 and 0x00
     uint16_t current_size = 256;
     uint32_t name_length;
     char *result = malloc(size);
     result[0] = '\0';
+    //puts("PWD: ILOVEYOU_1");
     INODE *current_inode = g_info->root_node->next_inode;
+    //puts("PWD: ILOVEYOU_2");
     if (current_inode == NULL) {
-        strcat((char *) pwd, "/");
+        strcat((char *) result, "/");
+
     }
 
     while (current_inode != NULL) {
@@ -323,8 +327,8 @@ char *cp(GENERAL_INFORMATION *g_info, char *from_path, char *to_path) {
         sprintf(output, "%s\n", message);
         return output;
     } else if (copy(g_info, result->result, to_path) != -1) {
-        message = "Successfully copied\n";
-        sprintf(output, "%s", message);
+        message = "Successfully copied";
+        sprintf(output, "%s\n", message);
         return output;
     } else {
         message = "ERROR: ERROR";

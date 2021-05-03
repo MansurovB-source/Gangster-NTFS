@@ -74,18 +74,20 @@ static void help() {
 
 static void shell(char *filename) {
     GENERAL_INFORMATION *g_info = init(filename);
-    printf("%s\n", filename);
     if (g_info == NULL) {
         puts("No NTFS file system detected");
         return;
     }
 
+    //puts("ILOVEYOU");
     bool exit = false;
     char *input = malloc(1024);
     char *sep = " \n";
     char *output = NULL;
     while (!exit) {
+        //puts("ILOVEYOU_1");
         char *current_dir = pwd(g_info);
+        //puts("ILOVEYOU_2");
         printf("%s> ", current_dir);
         free(current_dir);
         fgets(input, 1024, stdin);
@@ -98,7 +100,7 @@ static void shell(char *filename) {
         if (strcmp(command, "ls") == 0) {
             output = ls(g_info, from_path);
             if (output == NULL) {
-                printf("No such file or directory");
+                printf("No such directory\n");
                 continue;
             }
             printf("%s", output);

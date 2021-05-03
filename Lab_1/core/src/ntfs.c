@@ -21,15 +21,12 @@ static int init_chunk_data(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING
 GENERAL_INFORMATION *init(char *file_name) {
     int err = 0;
     int file_descriptor;
-    file_descriptor = open(name, O_RDONLY);
+    file_descriptor = open(file_name, O_RDONLY);
     if (file_descriptor == -1) {
-        err = errno;
-        printf("%d\n", errno);
-        printf("%s\n", strerror( err));
-        printf("%s\n", "fuck you");
         return NULL;
     }
 
+    // TODO check NULL
     NTFS_BOOT_SECTOR *boot_sector = open_NTFS_file_system(file_descriptor);
     GENERAL_INFORMATION *g_info = malloc(sizeof(GENERAL_INFORMATION));
     INODE *root_inode = malloc(sizeof(INODE));
@@ -54,13 +51,23 @@ GENERAL_INFORMATION *init(char *file_name) {
     root_inode->parent = root_inode;
     root_inode->next_inode = NULL;
 
+    printf("%s\n", "----------------------------");
+    printf("%ld\n", g_info->mft_lcn);
+    printf("%d\n", g_info->clusters_per_mft_record);
+    printf("%d\n", g_info->clusters_per_index_record);
+    printf("%u\n", g_info->bytes_per_sector);
+    printf("%u\n", g_info->sectors_per_cluster);
+    printf("%lu\n", g_info->mft_record_size_in_bytes);
+    printf("%u\n", g_info->block_size_in_bytes);
+    printf("%s\n", "----------------------------");
     return g_info;
 }
 
 NTFS_BOOT_SECTOR *open_NTFS_file_system(int file_descriptor) {
     NTFS_BOOT_SECTOR *boot_sector = malloc(sizeof(NTFS_BOOT_SECTOR));
     pread(file_descriptor, boot_sector, sizeof(NTFS_BOOT_SECTOR), 0);
-    if (strcmp((const char *) boot_sector->oem_id, "NTFS    ") == 0) {
+    uint64_t ntfs_id = 0x202020205346544e;
+    if (boot_sector->oem_id == ntfs_id) {
         return boot_sector;
     } else {
         free(boot_sector);
