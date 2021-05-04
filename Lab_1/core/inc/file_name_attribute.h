@@ -7,7 +7,7 @@
  * enum FILE_NAME_TYPE_FLAGS - Possible namespaces for filenames in ntfs.
  * (8-bit).
  */
-typedef enum {
+enum {
     FILE_NAME_POSIX = 0x00,
     /* This is the largest namespace. It is case sensitive and
        allows all Unicode characters except for: '\0' and '/'.
@@ -28,23 +28,25 @@ typedef enum {
     /* 3 means that both the Win32 and the DOS filenames are
        identical and hence have been saved in this single filename
        record. */
-} __attribute__((__packed__)) FILE_NAME_TYPE_FLAGS;
+} __attribute__((__packed__));
+
+typedef uint8_t FILE_NAME_TYPE_FLAGS;
 
 
 /**
  * enum FILE_ATTR_FLAGS - File attribute flags (32-bit).
  */
-typedef enum {
+enum {
     /*
      * These flags are only present in the STANDARD_INFORMATION attribute
      * (in the field file_attributes).
      */
-    FILE_ATTR_READONLY = (0x00000001),
-    FILE_ATTR_HIDDEN = (0x00000002),
-    FILE_ATTR_SYSTEM = (0x00000004),
+    FILE_ATTR_READONLY = 0x00000001,
+    FILE_ATTR_HIDDEN = 0x00000002,
+    FILE_ATTR_SYSTEM = 0x00000004,
     /* Old DOS volid. Unused in NT.	= (0x00000008), */
 
-    FILE_ATTR_DIRECTORY = (0x00000010),
+    FILE_ATTR_DIRECTORY = 0x00000010,
     /* FILE_ATTR_DIRECTORY is not considered valid in NT. It is reserved
        for the DOS SUBDIRECTORY flag. */
     FILE_ATTR_ARCHIVE = 0x00000020,
@@ -96,7 +98,9 @@ typedef enum {
      * $FILE_NAME attributes.
      */
     FILE_ATTR_VIEW_INDEX_PRESENT = (0x20000000),
-} __attribute__((__packed__)) FILE_ATTR_FLAGS;
+} __attribute__((__packed__));
+
+typedef uint32_t FILE_ATTR_FLAGS;
 
 
 /**

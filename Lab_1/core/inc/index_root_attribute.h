@@ -41,7 +41,7 @@
  *	the 2nd object_id. If the first le32 values of both object_ids were
  *	equal then the second le32 values would be compared, etc.
  */
-typedef enum {
+enum {
     COLLATION_BINARY = 0,
     COLLATION_FILE_NAME = 1,
     COLLATION_UNICODE_STRING = 2,
@@ -49,7 +49,9 @@ typedef enum {
     COLLATION_NTOFS_SID = 17,
     COLLATION_NTOFS_SECURITY_HASH = 18,
     COLLATION_NTOFS_ULONGS = 19,
-} COLLATION_RULES;
+};
+
+typedef uint32_t COLLATION_RULES;
 
 
 /**

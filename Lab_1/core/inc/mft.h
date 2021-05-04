@@ -37,7 +37,7 @@ typedef enum {
  * Magic identifiers present at the beginning of all ntfs record containing
  * records (like mft records for example).
  */
-typedef enum {
+enum {
     /* Found in $MFT/$DATA. */
     magic_FILE = 0x454c4946, /* Mft entry. */
     magic_INDX = 0x58444e49, /* Index buffer. */
@@ -59,7 +59,9 @@ typedef enum {
      * it.
      */
     magic_empty = 0xffffffff,/* Record is empty and has to be initialized before it can be used. */
-} NTFS_RECORD_TYPES;
+};
+
+typedef uint32_t NTFS_RECORD_TYPES;
 
 
 /**
@@ -76,14 +78,16 @@ typedef enum {
  * index, that means an INDEX_ROOT and an INDEX_ALLOCATION with a name other
  * than "$I30". It is unknown if it is limited to metadata files only.
  */
-typedef enum {
+enum {
     MFT_RECORD_IN_USE = 0x0001,
     MFT_RECORD_IS_DIRECTORY = 0x0002,
     MFT_RECORD_IS_4 = 0x0004,
     MFT_RECORD_IS_VIEW_INDEX = 0x0008,
     MFT_REC_SPACE_FILLER = 0xffff, /* Just to make flags
 						     16-bit. */
-} __attribute__((__packed__)) MFT_RECORD_FLAGS;
+} __attribute__((__packed__));
+
+typedef uint16_t MFT_RECORD_FLAGS;
 
 
 /**

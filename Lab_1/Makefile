@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-c
+CFLAGS=-c 
 LIBS=-lblkid
 
 all: main

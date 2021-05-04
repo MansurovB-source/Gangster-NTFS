@@ -7,7 +7,7 @@
 /**
  * enum INDEX_ENTRY_FLAGS - Index entry flags (16-bit).
  */
-typedef enum {
+enum {
     INDEX_ENTRY_NODE = 1, /* This entry contains a
 					sub-node, i.e. a reference to an index
 					block in form of a virtual cluster
@@ -17,7 +17,9 @@ typedef enum {
 					entry does not represent a file but it
 					can point to a sub-node. */
     INDEX_ENTRY_SPACE_FILLER = 0xffff, /* Just to force 16-bit width. */
-} __attribute__((__packed__)) INDEX_ENTRY_FLAGS;
+} __attribute__((__packed__));
+
+typedef uint16_t INDEX_ENTRY_FLAGS;
 
 
 /**

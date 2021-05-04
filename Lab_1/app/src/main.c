@@ -79,15 +79,12 @@ static void shell(char *filename) {
         return;
     }
 
-    //puts("ILOVEYOU");
     bool exit = false;
     char *input = malloc(1024);
     char *sep = " \n";
     char *output = NULL;
     while (!exit) {
-        //puts("ILOVEYOU_1");
         char *current_dir = pwd(g_info);
-        //puts("ILOVEYOU_2");
         printf("%s> ", current_dir);
         free(current_dir);
         fgets(input, 1024, stdin);
@@ -111,7 +108,7 @@ static void shell(char *filename) {
             free(output);
         } else if (strcmp(command, "cd") == 0) {
             if (from_path == NULL) {
-                puts("cd require path argument\n");
+                puts("cd require path argument");
                 continue;
             }
             output = cd(g_info, from_path);

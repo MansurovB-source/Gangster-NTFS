@@ -6,7 +6,7 @@
 /**
  * enum INDEX_HEADER_FLAGS - Index header flags (8-bit).
  */
-typedef enum {
+enum {
     /* When index header is in an index root attribute: */
     SMALL_INDEX = 0, /* The index is small enough to fit inside the
 				index root attribute and there is no index
@@ -23,7 +23,9 @@ typedef enum {
     INDEX_NODE = 1, /* This node indexes other nodes, i.e. is not a
 				leaf node. */
     NODE_MASK = 1, /* Mask for accessing the *_NODE bits. */
-} __attribute__((__packed__)) INDEX_HEADER_FLAGS;
+} __attribute__((__packed__));
+
+typedef uint8_t INDEX_HEADER_FLAGS;
 
 
 /**

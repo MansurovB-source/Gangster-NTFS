@@ -14,7 +14,7 @@
  * enum exchanging AT_ for the dollar sign ($). If that isn't a revealing
  * choice of symbol... (-;
  */
-typedef enum {
+enum {
     AT_UNUSED = 0,
     AT_STANDARD_INFORMATION = 0x10,
     AT_ATTRIBUTE_LIST = 0x20,
@@ -34,31 +34,34 @@ typedef enum {
     AT_LOGGED_UTILITY_STREAM = 0x100,
     AT_FIRST_USER_DEFINED_ATTRIBUTE = 0x1000,
     AT_END = 0xffffffff,
-} ATTR_TYPES;
+};
 
+typedef uint32_t ATTR_TYPES;
 
 /**
  * enum ATTR_FLAGS - Attribute flags (16-bit).
  */
-typedef enum {
+enum {
     ATTR_IS_COMPRESSED = 0x0001,
     ATTR_COMPRESSION_MASK = 0x00ff,  /* Compression
 						method mask. Also, first
 						illegal value. */
     ATTR_IS_ENCRYPTED = 0x4000,
     ATTR_IS_SPARSE = 0x8000,
-} __attribute__((__packed__)) ATTR_FLAGS;
+} __attribute__((__packed__));
 
+typedef uint16_t ATTR_FLAGS;
 
 /**
  * enum RESIDENT_ATTR_FLAGS - Flags of resident attributes (8-bit).
  */
-typedef enum {
+enum {
     RESIDENT_ATTR_IS_INDEXED = 0x01, /* Attribute is referenced in an index
 					    (has implications for deleting and
 					    modifying the attribute). */
-} __attribute__((__packed__)) RESIDENT_ATTR_FLAGS;
+} __attribute__((__packed__));
 
+typedef uint8_t RESIDENT_ATTR_FLAGS;
 
 /**
  * struct ATTR_RECORD - Attribute record header.
