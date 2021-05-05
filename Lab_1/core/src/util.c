@@ -26,7 +26,6 @@ static int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **st
     strcpy(path_buf, path);
     int count = count_nodes(path);
     char *sub_dir = strtok(path_buf, sep);
-    //printf("%s\n", sub_dir);
     int err;
     while (sub_dir != NULL) {
         found = false;
@@ -34,7 +33,6 @@ static int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **st
             free_inode(start_result_node);
             return -1;
         }
-        //printf("%s\n", sub_dir);
         err = read_directory(g_info, &result_node);
         if (err == -1) {
             free_inode(start_result_node);
@@ -48,7 +46,6 @@ static int find_node_by_name(GENERAL_INFORMATION *g_info, char *path, INODE **st
                 memcpy(tmp, head, sizeof(INODE));
                 tmp->filename = malloc(strlen(head->filename) + 1);
                 strcpy(tmp->filename, head->filename);
-                // если в директории файли с одинаковыми именами берем последнюю и очищаем за собой
                 free_inode(result_node->next_inode);
                 result_node->next_inode = tmp;
                 found = true;
@@ -97,18 +94,13 @@ static int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
             free(node_path);
             close(fd);
         }
-        //printf("%s\n", "in copy after call read_file_data");
-        //pwrite(1, chunk_data->buf, chunk_data->length, 0);
-        printf("chunk data length: %lu\n", chunk_data->length);
         if (chunk_data->resident) {
             pwrite(fd, chunk_data->buf, chunk_data->length, 0);
             close(fd);
             free(node_path);
             free_data_chunk(chunk_data);
-            printf("%s\n", "after free chunk_data");
             return 1;
         } else {
-            puts("NON RESIDENT");
             int64_t offset = 0;
             uint64_t size;
             while (read_block_file(g_info, &chunk_data) == 0) {
@@ -132,10 +124,10 @@ static int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
             free(node_path);
             return -1;
         }
-        printf("%s\n", node_path);
         INODE *read_node = malloc(sizeof(INODE));
         memcpy(read_node, node, sizeof(INODE));
         read_node->filename = NULL;
+        read_node->next_inode = NULL;
         int err = read_directory(g_info, &read_node);
         if (err == -1) {
             free(node_path);
@@ -149,7 +141,6 @@ static int copy(GENERAL_INFORMATION *g_info, INODE *node, char *to_path) {
                 free_inode(read_node);
                 return -1;
             }
-            printf("%s\n", tmp->filename);
             tmp = tmp->next_inode;
         }
         free(node_path);

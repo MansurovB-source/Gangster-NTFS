@@ -8,7 +8,7 @@
  * Basic information collected from different structures to facilitate the work
  */
 typedef struct {
-    int64_t mft_lcn;            /* Cluster location of mft data. */
+    uint64_t mft_lcn;            /* Cluster location of mft data. */
     int8_t clusters_per_mft_record;    /* Mft record size in clusters. */
     int8_t clusters_per_index_record;    /* Index block size in clusters. */
     uint64_t clusters;    /* Total number of clusters */

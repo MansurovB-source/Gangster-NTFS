@@ -14,6 +14,7 @@ static void options(int argc, char *argv[]);
 
 int main(int argc, char *argv[]) {
     options(argc, argv);
+    return 0;
 }
 
 static void options(int argc, char *argv[]) {
@@ -35,7 +36,7 @@ static void options(int argc, char *argv[]) {
                 print_device();
                 break;
             case 'h':
-                
+
                 help();
                 break;
             case 's':

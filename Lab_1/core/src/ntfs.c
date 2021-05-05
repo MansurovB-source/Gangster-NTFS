@@ -1,6 +1,5 @@
 #include "../inc/ntfs.h"
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -21,13 +20,15 @@ static int init_chunk_data(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING
 GENERAL_INFORMATION *init(char *file_name) {
     int err = 0;
     int file_descriptor;
-    file_descriptor = open(file_name, O_RDONLY);
+    file_descriptor = open(file_name, O_RDONLY, 00666);
     if (file_descriptor == -1) {
         return NULL;
     }
 
-    // TODO check NULL
-    NTFS_BOOT_SECTOR *boot_sector = open_NTFS_file_system(file_descriptor);
+    NTFS_BOOT_SECTOR *boot_sector;
+    if ((boot_sector = open_NTFS_file_system(file_descriptor)) == NULL) {
+        return NULL;
+    }
     GENERAL_INFORMATION *g_info = malloc(sizeof(GENERAL_INFORMATION));
     INODE *root_inode = malloc(sizeof(INODE));
 
@@ -51,27 +52,27 @@ GENERAL_INFORMATION *init(char *file_name) {
     root_inode->parent = root_inode;
     root_inode->next_inode = NULL;
 
-    printf("%s\n", "----------------------------");
-    printf("%ld\n", g_info->mft_lcn);
-    printf("%d\n", g_info->clusters_per_mft_record);
-    printf("%d\n", g_info->clusters_per_index_record);
-    printf("%u\n", g_info->bytes_per_sector);
-    printf("%u\n", g_info->sectors_per_cluster);
-    printf("%lu\n", g_info->mft_record_size_in_bytes);
-    printf("%u\n", g_info->block_size_in_bytes);
-    printf("%s\n", "----------------------------");
+    printf("%s\n", "Basic information about  file system");
+    printf("Cluster location of mft data: %ld\n", g_info->mft_lcn);
+    printf("Cluster per mft record: %d\n", g_info->clusters_per_mft_record);
+    printf("Cluster per index_record: %d\n", g_info->clusters_per_index_record);
+    printf("Bytes per sector: %u\n", g_info->bytes_per_sector);
+    printf("Sector per cluster: %u\n", g_info->sectors_per_cluster);
+    printf("Mft size in bytes: %lu\n", g_info->mft_record_size_in_bytes);
+    printf("Block size in bytes: %u\n", g_info->block_size_in_bytes);
 
+    printf("%s\n", "Basic information about structures");
     printf("size ATTR_RECORD is 72 = %lu\n", sizeof(ATTR_RECORD));
     printf("size NTFS_BOOT_SECTOR is 512 = %lu\n", sizeof(NTFS_BOOT_SECTOR));
     printf("size BIOS_PARAMETER_BLOCK is 25 = %lu\n", sizeof(BIOS_PARAMETER_BLOCK));
-    printf("sizo FILE_NAME_ATTR is more or equal than 42 = %lu\n", sizeof(FILE_NAME_ATTR));
+    printf("size FILE_NAME_ATTR is more or equal than 42 = %lu\n", sizeof(FILE_NAME_ATTR));
     printf("size GENERAL_INFORMATION is 35 + 16 = 51 = %lu\n", sizeof(GENERAL_INFORMATION));
     printf("size INDEX_ALLOCATION is 40 = %lu\n", sizeof(INDEX_ALLOCATION));
     printf("size INDEX_ENTRY is 82 = %lu\n", sizeof(INDEX_ENTRY));
     printf("size INDEX_HEADER is 16 = %lu\n", sizeof(INDEX_HEADER));
     printf("size INDEX_ROOT is 32 = %lu\n", sizeof(INDEX_ROOT));
     printf("size INODE is 6 + 3 * 8 = 30 =  %lu\n", sizeof(INODE));
-    printf("size INODE is 2 * 8 = 16 = %lu\n", sizeof(FIND_INFO));    
+    printf("size INODE is 2 * 8 = 16 = %lu\n", sizeof(FIND_INFO));
     printf("size MAPPING_CHUNK is 9 + 8 = 17 =  %lu\n", sizeof(MAPPING_CHUNK));
     printf("size MAPPING_CHUNK_DATA is 37 + 24 = 61 =  %lu\n", sizeof(MAPPING_CHUNK_DATA));
     printf("size MFT_RECORD is 48 = %lu\n", sizeof(MFT_RECORD));
@@ -121,13 +122,12 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
     INDEX_ROOT *index_root = (INDEX_ROOT *) ((uint8_t *) attr_index + attr_index->value_offset);
     uint8_t *index_entry_offset = ((uint8_t *) &index_root->index + index_root->index.entries_offset);
     uint64_t mft_entry_offset;
-    uint64_t cnt = 0;
+    int cnt = 0;
     do {
         index_entry = (INDEX_ENTRY *) index_entry_offset;
         index_entry_offset = ((uint8_t *) index_entry + index_entry->length);
         if (index_entry->key_length) {
             file_name_length = file_name_convertor(file_name, index_entry);
-            //TODO проверить имя файла для вывода
             if (file_name[0] != '.' && file_name[0] != '$') {
                 current_inode->next_inode = malloc(sizeof(INODE));
                 current_inode->next_inode->next_inode = NULL;
@@ -136,7 +136,6 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
                 current_inode->filename = malloc(file_name_length);
                 memcpy(current_inode->filename, file_name, file_name_length);
 
-                //TODO мб MFT_MASK ?
                 mft_entry_offset = search_mft_record(g_info, index_entry->indexed_file, &directory_entry);
                 if (mft_entry_offset == -1) {
                     free(directory_entry);
@@ -180,7 +179,6 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
     free(directory_record);
     MAPPING_CHUNK *chunk = malloc(sizeof(MAPPING_CHUNK));
     chunk->current_block = 0;
-    //printf("%s\n", "We are in non-resident part");
     parse_data_run(stream, g_info, &chunk);
 
     do {
@@ -211,7 +209,6 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
                     current_inode = current_inode->next_inode;
                     current_inode->parent = *inode;
                     current_inode->filename = malloc(file_name_length);
-                    //TODO HMM
                     memcpy(current_inode->filename, &file_name[0], file_name_length);
                     mft_entry_offset = search_mft_record(g_info, index_entry->indexed_file, &directory_entry);
                     if (mft_entry_offset == -1) {
@@ -219,7 +216,6 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
                         free(chunk->buf);
                         free(chunk);
                     }
-                    //printf("current_inode file_name: %s\n", current_inode->filename);
                     current_inode->type = directory_entry->flags;
                     current_inode->mft_num = index_entry->indexed_file;
                     cnt++;
@@ -232,7 +228,6 @@ int read_directory(GENERAL_INFORMATION *g_info, INODE **inode) {
     free(directory_entry);
     free(chunk->buf);
     free(chunk);
-    //puts("GOOD BUY READDIR\n");
     return cnt;
 }
 
@@ -263,7 +258,9 @@ int search_attr(GENERAL_INFORMATION *g_info, uint32_t type, MFT_RECORD *mft_reco
     *attr_record = (ATTR_RECORD *) ((uint8_t *) mft_record + mft_record->attrs_offset);
 
     // TODO не уверен на счет sizeof(ATTR_RECORD). Думаю можно убрать.
-    void *end = mft_record + g_info->mft_record_size_in_bytes - sizeof(ATTR_RECORD);
+    //void *end = mft_record + g_info->mft_record_size_in_bytes - sizeof(ATTR_RECORD);
+
+    void *end = mft_record + g_info->mft_record_size_in_bytes;
 
     while ((*attr_record)->type != AT_END && (*attr_record)->type != type && (void *) (*attr_record) < end) {
         *attr_record = (ATTR_RECORD *) ((uint8_t *) (*attr_record) + (*attr_record)->length);
@@ -296,21 +293,14 @@ int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA
         return -1;
     }
 
-     //printf("%s\n", "read file data(): before malloc MAPPING_CHUNK_DATA");
-     // printf("%lu\n", sizeof(MAPPING_CHUNK_DATA));
     (*chunk_data) = malloc(sizeof(MAPPING_CHUNK_DATA));
     if (!attr_data->non_resident) {
         (*chunk_data)->resident = 1;
-        //printf("%s\n", "read file data(): after malloc MAPPING_CHUNK_DATA");
         (*chunk_data)->length = attr_data->value_length;
-        //printf("lenght of data: %lu\n", (*chunk_data)->length);
-        //printf("%s\n", "before buf malloc");
         (*chunk_data)->buf = malloc(attr_data->value_length);
-        //printf("%s\n", "after buf malloc"); 
         memcpy((*chunk_data)->buf, (uint8_t *) attr_data + attr_data->value_offset, (*chunk_data)->length);
         (*chunk_data)->lcns = NULL;
         (*chunk_data)->lengths = NULL;
-        //printf("%s\n", "read file data(): at the end of resident part");
     } else {
         (*chunk_data)->resident = 0;
         uint64_t stream =
@@ -321,9 +311,7 @@ int read_file_data(GENERAL_INFORMATION *g_info, INODE *inode, MAPPING_CHUNK_DATA
         (*chunk_data)->blocks_count = 0;
     }
 
-    //printf("%s\n", "before mft_file_record");
     free(mft_file_record);
-    printf("%s\n", "after free mft_file_record");
     return 0;
 }
 
@@ -374,7 +362,6 @@ int free_data_chunk(MAPPING_CHUNK_DATA *chunk_data) {
         free(chunk_data->lengths);
     }
 
-    // printf("in the free_data_chuk sizeof mapping_chunk_data: %ld\n", sizeof(MAPPING_CHUNK_DATA));
     free(chunk_data);
     return 0;
 }
@@ -449,7 +436,6 @@ static int parse_data_run(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING_
         /* NTFS 3+ sparse files, если файл разряжен */
         if (data_run_offset_size == 0) {
             data_run_offset = -1;
-            //TODO maybe break
         } else {
             //цикл распаковки смещения
             for (i = 0; i < data_run_offset_size - 1; i++) {
@@ -476,7 +462,6 @@ static int parse_data_run(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING_
 }
 
 static int init_chunk_data(uint64_t offset, GENERAL_INFORMATION *g_info, MAPPING_CHUNK_DATA **chunk_data) {
-    puts("HELLO FROM CHUNK_DATA");
     uint8_t *run_list = malloc(g_info->block_size_in_bytes);
     pread(g_info->file_descriptor, run_list, g_info->block_size_in_bytes, offset);
     uint8_t *ptr_run_list = run_list;
