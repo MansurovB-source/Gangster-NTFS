@@ -1,79 +1,44 @@
-#include "../inc/device.h"
+#include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+#include <regex.h>
 
-int init_cache(blkid_cache *cache) {
-    int status = blkid_get_cache(cache, NULL);
-    if (status < 0) {
-        puts("ERROR: Can't get the cache");
+#define SYS_BLOCK_DIR "/sys/block/"
+#define DRIVE_PATTERN "^((loop)[0-9])|(sda)|(sr[0-9])"
+
+int print_available_devices() {
+    DIR *block_devices_dir;
+    DIR *partitions_dir;
+    struct dirent *block_device_entry;
+    struct dirent *partition_entry;
+    regex_t matcher_drives;
+    regex_t matcher_partitions;
+
+    regcomp(&matcher_drives, DRIVE_PATTERN, REG_EXTENDED);
+    block_devices_dir = opendir(SYS_BLOCK_DIR);
+    if (!block_devices_dir) {
         return -1;
     }
-    puts("Successful cache read");
-    return 0;
-}
+    while ((block_device_entry = readdir(block_devices_dir)) != NULL) {
+        if (!regexec(&matcher_drives, block_device_entry->d_name, 0, NULL, 0)) {
+            printf("Drive %s\n", block_device_entry->d_name);
 
-int probe_devices(blkid_cache *cache) {
-    int status = blkid_probe_all(*cache);
-    if (status < 0) {
-        puts("ERROR: Can't probe all block devices");
-        return -1;
-    }
-    puts("Successfully probed all block devices");
-    return 0;
-}
-
-int iterate_devices(blkid_cache *cache) {
-    blkid_dev device;
-    blkid_dev_iterate iterator = blkid_dev_iterate_begin(*cache);
-
-    puts("Partitions:\n");
-    while (blkid_dev_next(iterator, &device) == 0) {
-        const char *device_name = blkid_dev_devname(device);
-        printf("\t%s\t", device_name);
-
-        blkid_probe probe = blkid_new_probe_from_filename(device_name);
-        if (probe == NULL) {
-            fprintf(stderr, "Launch util as root to get more information!\n");
-        } else {
-            blkid_loff_t size = blkid_probe_get_size(probe);
-            size_print(size);
-
-            blkid_do_probe(probe);
-            printf("\t");
-            get_tag(&probe, "TYPE");
-            get_tag(&probe, "UUID");
-            get_tag(&probe, "LABEL");
-            printf("\t\n");
+            regcomp(&matcher_partitions, block_device_entry->d_name, 0);
+            char drive_dir[strlen(SYS_BLOCK_DIR) + strlen(block_device_entry->d_name) + 1];
+            drive_dir[0] = 0;
+            strcat(drive_dir, SYS_BLOCK_DIR);
+            strcat(drive_dir, block_device_entry->d_name);
+            partitions_dir = opendir(drive_dir);
+            if (!partitions_dir) {
+                return -1;
+            }
+            while ((partition_entry = readdir(partitions_dir)) != NULL) {
+                if (!regexec(&matcher_partitions, partition_entry->d_name, 0, NULL, 0)) {
+                    printf("\t- partition %s\n", partition_entry->d_name);
+                }
+            }
         }
     }
-    blkid_dev_iterate_end(iterator);
+    closedir(block_devices_dir);
     return 0;
 }
-
-void size_print(long long size) {
-    if ((double) size >= _TiB_) {
-        printf("%f TiB", (double) ((double) size / _TiB_));
-    } else if ((double) size >= _GiB_) {
-        printf("%f Gib", (double) ((double) size / _GiB_));
-    } else if ((double) size >= _MiB_) {
-        printf("%f Mib", (double) ((double) size / _MiB_));
-    } else if ((double) size >= _KiB_) {
-        printf("%f Kib", (double) ((double) size / _KiB_));
-    } else {
-        printf("%f B", (double) ((double) size / _KiB_));
-    }
-}
-
-void get_tag(blkid_probe *probe, char *tag_name) {
-    const char *value;
-    if (blkid_probe_has_value(*probe, tag_name) == 1) {
-        blkid_probe_lookup_value(*probe, tag_name, &value, NULL);
-        printf("%s = %s\t", tag_name, value);
-    }
-}
-
-void print_device() {
-    blkid_cache cache;
-    init_cache(&cache);
-    probe_devices(&cache);
-    iterate_devices(&cache);
-}
-

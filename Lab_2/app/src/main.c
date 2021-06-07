@@ -33,7 +33,7 @@ static void options(int argc, char *argv[]) {
     while ((rez = getopt_long(argc, argv, short_flags, long_flags, &long_id)) != -1) {
         switch (rez) {
             case 'l':
-                print_device();
+                print_available_devices();
                 break;
             case 'h':
                 help();
